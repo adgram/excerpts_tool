@@ -1,0 +1,30 @@
+{
+  "excerpts": [],
+  "tags": [
+    {
+      "cid": "default",
+      "name": "全部摘录",
+      "color": "#d13fac",
+      "orders": 1
+    },
+    {
+      "cid": "prose",
+      "name": "抒情散文",
+      "color": "#f72585",
+      "orders": 2
+    },
+    {
+      "cid": "poetry",
+      "name": "现代诗歌",
+      "color": "#3a0ca3",
+      "orders": 3
+    },
+    {
+      "cid": "fiction",
+      "name": "实体小说",
+      "color": "#7ed957",
+      "orders": 4
+    }
+  ],
+  "export_date": "2025-12-13T13:09:56.234699"
+}
