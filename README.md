@@ -2,7 +2,7 @@
 
 ### Text Excerpt Tool
 
-This program is used to extract text snippets. The program uses Sqlite for storage and PySide6 for the interface.
+This program is used to extract text snippets. The program uses Sqlite for storage, PySide6 and flask&HTML for the interface.
 
 ### Structure of Excerpt Data
 
@@ -27,15 +27,39 @@ Note: The UI has not implemented rendering for Note, Related, and Attachment ite
 
 ### Starting the Program
 
-Run [main.py](main.py) to start the program.
-
-Or run the following command to start and open a specific file:
+Run [main.py](main.py) to start the file selection program:
 
 ```python
-from excerpts import run
+from excerpts import qt_run
 
-run(file_name="excerpts1.db")
+qt_run()
 ```
+
+```
+from excerpts import html_run
+
+html_run()
+```
+
+The HTML page can be accessed at:
+ http://127.0.0.1:5000
+
+Alternatively, run the following command to start the Qt UI and open a specific file:
+
+```python
+from excerpts import qt_run
+
+qt_run(file_name="excerpts1.db")
+```
+
+```
+from excerpts import html_run
+
+html_run()
+```
+
+The HTML page can be accessed directly at:
+ http://127.0.0.1:5000/excerpts1.db
 
 ![image-20251213195748811](README.assets/image-20251213195748811.png)
 

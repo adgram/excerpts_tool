@@ -10,7 +10,7 @@ from typing import Callable, Optional
 from pathlib import Path
 
 from .cards import CardWidget, DataTagItem, TagButton, QPushButton, MColor, DataTagWidget
-from ..sqlutils import SqlDataManager, TagData, ExcerptData
+from ..sqlutils import SqlDataManager, TagData, ExcerptData, get_db_list
 
 
 
@@ -193,7 +193,7 @@ class MasonryArea(QWidget):
             self.main_layout.addWidget(cw)
             self.column_widgets.append(cw)
         self.main_layout.addWidget(self.right_spacer)
-        self.sqldata = SqlDataManager.instance()
+        self.sqldata = SqlDataManager.instance(0)
         if not self.sqldata:
             return
         self.rebuild_cards(self.sqldata.get_all_excerpts())
@@ -273,9 +273,9 @@ class TagList(QListWidget):
 
     def reload_tags(self):
         self.clear()
-        if not SqlDataManager.instance():
+        if not SqlDataManager.instance(0):
             return
-        tags = SqlDataManager.instance().get_all_tags()
+        tags = SqlDataManager.instance(0).get_all_tags()
         for tag in tags:
             DataTagItem(tag).add_to(self)
         for i in range(self.count()):
@@ -385,7 +385,7 @@ class SideBar(QFrame):
             self.sig_tag_selected.emit(cur.tag.cid)
 
     def open_tag_manager(self):
-        if not SqlDataManager.instance():
+        if not SqlDataManager.instance(0):
             return
         dialog = TagManagerDialog(self)
         if dialog.exec():
@@ -398,12 +398,12 @@ class SideBar(QFrame):
 
     def on_search_changed(self, text):
         '''实时搜索'''
-        if not SqlDataManager.instance():
+        if not SqlDataManager.instance(0):
             return
         if not text:
             self.listw.show_all()
             return
-        data = SqlDataManager.instance().get_tags_helper().search(text)
+        data = SqlDataManager.instance(0).get_tags_helper().search(text)
         self.listw.show_data(data)
 
 
@@ -505,7 +505,7 @@ class ContentPanel(QFrame):
             self.masonry.refresh(viewport_width)
 
     def open_new_excerpt_dialog(self):
-        if not SqlDataManager.instance():
+        if not SqlDataManager.instance(0):
             return
         dialog = ExcerptDataDialog(None, self)
         dialog.exec()
@@ -549,7 +549,7 @@ class ContentPanel(QFrame):
 class ExcerptDataDialog(QDialog):
     def __init__(self, data: Optional[ExcerptData], parent: ContentPanel=None):
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance()
+        self.sqldata = SqlDataManager.instance(0)
         self.data = data
         self.selected_tags: set[str] = set()
         self._btns_by_cid: dict[str, TagButton] = {}
@@ -770,7 +770,7 @@ class TagManagerDialog(QDialog):
             parent: 父控件
         """
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance()
+        self.sqldata = SqlDataManager.instance(0)
         self.tags: list[TagData] = self.sqldata.get_all_tags()
         for i, tag in enumerate(self.tags):
             if tag.cid == "default":
@@ -990,7 +990,7 @@ class DataManagerDialog(QDialog):
             parent: 父控件
         """
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance()
+        self.sqldata = SqlDataManager.instance(0)
         self.mainui: QWidget = self.parent().parent()
         self.init_ui()
     
@@ -1275,17 +1275,12 @@ class SqlReaderDialog(QDialog):
             if not self.file_path.exists():
                 QMessageBox.warning(self, "警告", f"路径不存在: {self.file_path}")
                 return
-            # 获取所有文件（不包括目录），使用pathlib的iterdir和is_file
-            self.file_list = [
-                item.name for item in self.file_path.iterdir() 
-                if (item.is_file() and item.name.endswith('.db'))
-            ]
+            self.file_list = get_db_list(self.file_path)
             if not self.file_list:
                 QMessageBox.information(self, "提示", "该目录下没有文件")
                 self.combo_box.addItem("无文件")
                 self.ok_button.setEnabled(False)
             else:
-                self.file_list.sort()  # 对文件列表进行排序
                 self.combo_box.addItems(self.file_list)
                 self.combo_box.setCurrentIndex(0)
         except Exception as e:

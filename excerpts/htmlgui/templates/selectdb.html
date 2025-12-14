@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>打开数据库</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/selectdb.css') }}">
+</head>
+<body>
+    <div class="container"> 
+        <h1>打开数据库</h1>
+
+        <form method="POST" action="{{ url_for('config.select_db_view') }}">
+            
+            <label for="db_select">请选择文件:</label>
+            
+            <select id="db_select" name="db_path" required>
+                {% if db_list %}
+                    {% for db_name in db_list %}
+                        <option value="{{ db_name | string }}">{{ db_name }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="" disabled selected>无可用文件</option>
+                {% endif %}
+            </select>
+            
+            <input type="submit" value="确定">
+        </form>
+        <p class="note">如果列表中没有文件，请手动将数据库文件放入data目录。</p>
+    </div>
+</body>
+</html>

@@ -175,7 +175,7 @@ class CardWidget(QWidget):
             for cid in self.data.tag_cids:
                 if cid == "default":
                     continue
-                tag = SqlDataManager.instance().get_tag(cid)
+                tag = SqlDataManager.instance(0).get_tag(cid)
                 fm = QFontMetrics(self.font_tag)
                 w = fm.horizontalAdvance(tag.name) + 10 * self.factor
                 h = 18 * self.factor
@@ -370,7 +370,7 @@ class DataTagWidget(QWidget):
         super().mouseDoubleClickEvent(event)
     
     def reset_tagnum(self):
-        self.count_label.setText(f'({SqlDataManager.instance().get_tag_excerpts_count(self.cid)})')
+        self.count_label.setText(f'({SqlDataManager.instance(0).get_tag_excerpts_count(self.cid)})')
 
 
 
@@ -389,4 +389,4 @@ class DataTagItem(QListWidgetItem):
 
     @property
     def tag_num(self):
-        return SqlDataManager.instance().get_tag_excerpts_count(self.tag.cid)
+        return SqlDataManager.instance(0).get_tag_excerpts_count(self.tag.cid)

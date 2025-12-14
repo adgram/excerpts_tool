@@ -1,0 +1,126 @@
+/* excerpts/htmlgui/static/css/select_db.css (浅色主题重构) */
+
+/* 模拟 MColor 变量 */
+:root {
+    --color-bg: #f5faff;        /* MColor.color_bg (浅蓝白) */
+    --color-light2: #e7e7e7;    /* MColor.color_light2 (浅灰) */
+    --color-bright: #4381ff;    /* MColor.color_bright (蓝色高亮) */
+    --color-text-dark: #222222; /* MColor.color_black */
+    --color-border: #d7d7d7;    /* MColor.color_light */
+    --spacing: 10px;
+}
+
+/* --- 基础样式和容器 --- */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.container {
+    /* 模拟 QDialog 的背景和边距 */
+    background-color: var(--color-white, #ffffff);
+    padding: 20px; /* 模拟 setContentsMargins(20) */
+    border: 1px solid var(--color-border); 
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 400px;
+    /* 模拟 QVBoxLayout 的 spacing */
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+}
+
+h1 {
+    /* 模拟窗口标题 */
+    font-size: 1.5em;
+    color: var(--color-bright);
+    margin-bottom: var(--spacing);
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: center;
+}
+
+/* --- 下拉选择框 (模拟 QComboBox) --- */
+form {
+    display: contents;
+}
+
+label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: var(--color-text-dark);
+    font-size: 0.9em;
+}
+
+#db_select {
+    /* 模拟 QComboBox 样式 */
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-light2); /* 模拟 MColor.color_light2 背景 */
+    color: var(--color-text-dark);
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
+    min-height: 40px; 
+    /* 模拟 QWidget(14) 的间隔 */
+    margin-bottom: 14px; 
+    appearance: none; /* 移除浏览器默认样式 */
+}
+
+/* --- 按钮样式 (模拟 QPushButton) --- */
+input[type="submit"], .button-cancel {
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-bright);
+    color: var(--color-bright);
+    background: none;
+    padding: 8px 15px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    height: 34px;
+    line-height: normal;
+}
+
+input[type="submit"]:hover, .button-cancel:hover {
+    background: var(--color-bright);
+    color: var(--color-white, #ffffff);
+}
+
+.button-cancel {
+    text-decoration: none;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    /* 取消按钮的颜色可能略有不同，但此处保持与确定按钮一致 */
+}
+
+/* --- 文件列表（被下拉框取代，保留结构供参考） --- */
+hr {
+    border: 0;
+    height: 1px;
+    background-color: var(--color-border);
+    margin: 10px 0;
+}
+
+h2 {
+    font-size: 1.1em;
+    color: var(--color-text-dark);
+    margin: 0;
+}
+
+.note {
+    font-size: 0.85em;
+    color: var(--color-dark, #484848);
+    text-align: center;
+    margin-top: 10px;
+}

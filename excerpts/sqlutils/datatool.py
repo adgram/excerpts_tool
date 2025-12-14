@@ -2,10 +2,9 @@ import uuid, random, sqlite3
 from datetime import datetime
 from typing import TypedDict, Optional
 from dataclasses import dataclass, asdict
+from pathlib import Path
 
 from .sqlbase import TableHelper, IdTableHelper, SqlbaseHelper
-
-
 
 class TagDataDict(TypedDict):
     cid   : str # 标签ID
@@ -485,7 +484,6 @@ class SqlDataManager(SqlbaseHelper):
     """
     数据库管理器类，用于处理标签和摘录数据的存储与检索
     """
-    _instance = None
     def init_database(self) -> None:
         """初始化数据库连接和表结构"""
         super().init_database()
@@ -529,13 +527,6 @@ class SqlDataManager(SqlbaseHelper):
             table.delete_table()
         self.conn.commit()
         self.init_database()
-    
-    @classmethod
-    def instance(cls) -> 'SqlDataManager':
-        return cls._instance
-
-    def set_instance(self) -> None:
-        SqlDataManager._instance = self
 
     def update_excerpt(self, new: ExcerptData, old: ExcerptData = None) -> ExcerptData:
         """更新"""
@@ -565,3 +556,17 @@ class SqlDataManager(SqlbaseHelper):
             tags = excerpt.pop("tags")
             excerpt["tag_cids"] = [self.get_tags_helper().get_cid(tag) for tag in tags]
         self.insert_excerpts(ExcerptData.from_dict_list(excerpts))
+
+
+def get_sql_path():
+    return Path(__file__).parent.parent.parent/"data/"
+
+
+def get_db_list(file_path: Path):
+    file_list = [
+        item.name for item in file_path.iterdir() 
+        if (item.is_file() and item.name.endswith('.db'))
+    ]
+    if file_list:
+        file_list.sort()
+    return file_list

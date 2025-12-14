@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Any, Iterable, Optional, Callable, Union
 import json, datetime, uuid
-
+from pathlib import Path
 
 
 # import time
@@ -429,14 +429,16 @@ class SqlbaseHelper:
     """
     数据库管理器类，用于处理数据的存储与检索
     """
-    __slots__ = ('db_path', 'conn', 'cursor', 'table_helpers')
-    def __init__(self, db_path: str) -> None:
+    __slots__ = ('db_path', 'db_key', 'conn', 'cursor', 'table_helpers')
+    _instances: dict[int, 'SqlbaseHelper'] = {}
+    def __init__(self, db_path: Path) -> None:
         """
         初始化数据库管理器
         Args:
             db_path (str): 数据库文件路径，默认为""
         """
-        self.db_path: str = db_path
+        self.db_path: Path = db_path
+        self.db_key = hash(db_path)
         self.conn: Optional[sqlite3.Connection] = None
         self.cursor: Optional[sqlite3.Cursor] = None
         self.table_helpers: dict[str, TableHelper] = {}
@@ -449,6 +451,22 @@ class SqlbaseHelper:
             self.conn.execute("PRAGMA foreign_keys = ON")  # 启用外键
             self.cursor = self.conn.cursor()
     
+    @classmethod
+    def instance(cls, key: int = 0) -> Optional['SqlbaseHelper']:
+        return cls._instances.get(key, None)
+
+    def set_instance(self, key: int = None) -> None:
+        """
+        将当前实例注册为指定键的实例。
+        """
+        if key == 0:
+            self.__class__._instances[0] = self
+        elif key is None:
+            self.__class__._instances[self.db_key] = self
+        else:
+            self.db_key = key
+            self.__class__._instances[key] = self
+
     def create_table_helper(self, name: str, columns: list[tuple[str, str]], 
                            pk: Union[str, list[str]] = "id", 
                            not_null: Optional[list[str]] = None,

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>摘录工具</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+</head>
+
+<body>
+
+<div class="layout">
+  <aside class="leftbar">
+    <div class="leftbar-header">
+        <h3>📑 标签分类</h3>
+        <div style="flex:1"></div>
+        <button id="btn-manage" class="btn small">⚙️</button>
+        <button class="btn small close-btn">✖</button>
+    </div>
+    <div class="search">
+      <input type="text" placeholder="搜索标签..." />
+    </div>
+    
+    <div class="leftbar-content" id="tagList">
+      </div>
+    <button class="btn outline export-btn">💾 数据管理</button>
+  </aside>
+
+  <div class="rightcontent">
+    <div class="topbar">
+      <div class="logo menu-btn">
+        <span>📝 文字摘录工具</span>
+      </div>
+
+      <div class="search">
+        <input type="text" placeholder="搜索摘录内容..." />
+        <button class="btn primary">搜索</button>
+      </div>
+    </div>
+    
+    <div class="content">
+      <div class="content-header">
+        <h3>所有摘录</h3>
+        <button class="btn primary">新建</button>
+      </div>
+
+      <div class="masonry" id="masonryContainer">
+        </div>
+
+    </div>
+  </div>
+
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

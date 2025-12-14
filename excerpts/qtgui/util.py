@@ -1,12 +1,9 @@
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
-from PySide6.QtGui import QColor, QPalette
+from ..sqlutils import SqlDataManager, get_sql_path, get_db_list
 from pathlib import Path
 
-from .panels import SideBar, Topbar, ContentPanel, MColor, SqlReaderDialog
-from ..sqlutils import SqlDataManager
 
-
+def get_sql_manager()
 
 
 class MainUI(QWidget):
@@ -76,7 +73,7 @@ class MainUI(QWidget):
         if file_name: self.file_name = file_name
         self.setWindowTitle(f"文字摘录工具-{self.file_name}")
         self.db_manager = SqlDataManager(self.path/self.file_name)
-        self.db_manager.set_instance(0)
+        self.db_manager.set_instance()
         self.content.update_columns(init_load=True)
         self.sidebar.listw.reload_tags()
 

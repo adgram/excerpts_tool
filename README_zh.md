@@ -2,7 +2,7 @@
 
 ### 文本摘录工具
 
-本程序用于摘录文本片段。程序存储采用Sqlite，程序界面采用pyside6。
+本程序用于摘录文本片段。程序存储采用Sqlite，程序界面采用pyside6和(flask+HTML)。
 
 ### 摘录片段数据的结构
 
@@ -27,15 +27,37 @@
 
 ### 开始程序
 
-运行[main.py](main.py)即可启动程序。
-
-或运行下面命令启动并打开某个文件：
+运行[main.py](main.py)即可启动选择文件程序：
 
 ```python
-from excerpts import run
+from excerpts import qt_run
 
-run(file_name="excerpts1.db")
+qt_run()
 ```
+
+```python
+from excerpts import html_run
+
+html_run()
+```
+
+HTML页面需要访问http://127.0.0.1:5000
+
+或运行下面命令启动qt ui并打开某个文件：
+
+```python
+from excerpts import qt_run
+
+qt_run(file_name="excerpts1.db")
+```
+
+```python
+from excerpts import html_run
+
+html_run()
+```
+
+HTML页面直接访问http://127.0.0.1:5000/excerpts1.db
 
 ![image-20251213195748811](README.assets/image-20251213195748811.png)
 
