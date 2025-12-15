@@ -455,14 +455,12 @@ class SqlbaseHelper:
     def instance(cls, key: int = 0) -> Optional['SqlbaseHelper']:
         return cls._instances.get(key, None)
 
-    def set_instance(self, key: int = None) -> None:
+    def set_instance(self, key: int = 0) -> None:
         """
         将当前实例注册为指定键的实例。
         """
         if key == 0:
             self.__class__._instances[0] = self
-        elif key is None:
-            self.__class__._instances[self.db_key] = self
         else:
             self.db_key = key
             self.__class__._instances[key] = self

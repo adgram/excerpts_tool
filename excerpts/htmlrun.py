@@ -1,8 +1,9 @@
 from flask import Flask
 from pathlib import Path
 import logging
+from flask_session import Session
 
-from .htmlgui.views import index_bp, api_bp, config_bp, close_manager, check_db_selection
+from .htmlgui.views import app_bp, api_bp, config_bp, close_manager
 from .htmlgui import config
 
 
@@ -22,13 +23,14 @@ def create_flask_app():
         static_folder = static_path
     )
     app.config.from_object(config)
+    if app.config.get('SESSION_TYPE'):
+        Session(app)
     # 注册钩子：在请求结束后关闭线程安全的连接 (解决 g 存储对象的生命周期)
     app.teardown_appcontext(close_manager) 
-    # 注册蓝图 (index_bp 处理 / 路由, api_bp 处理 /api/* 路由)
-    app.register_blueprint(index_bp)
-    app.register_blueprint(api_bp)
+    # 注册蓝图 (app_bp 处理 / 路由, api_bp 处理 /api/* 路由)
     app.register_blueprint(config_bp)
-    app.before_request(check_db_selection)
+    app.register_blueprint(app_bp)
+    app.register_blueprint(api_bp)
     return app
 
 

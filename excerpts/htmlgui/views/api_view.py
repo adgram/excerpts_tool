@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, abort
 import flask
 import logging
 from typing import Optional
@@ -15,8 +15,12 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # 在线程内创建一个独立的SqlDataManager，操作完即释放
 def get_db_manager() -> SqlDataManager:
+    db_key = session.get('db_key')
+    if not db_key:
+        jsonify({"error": "Database not selected or session expired"}), 403
+        abort(403)
     if 'temp_manager' not in flask.g:
-        flask.g.temp_manager = SqlDataManager(Path(session.get('db_key')))
+        flask.g.temp_manager = SqlDataManager(Path(db_key))
     return flask.g.temp_manager
 
 

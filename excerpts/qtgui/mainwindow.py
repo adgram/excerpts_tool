@@ -76,7 +76,7 @@ class MainUI(QWidget):
         if file_name: self.file_name = file_name
         self.setWindowTitle(f"文字摘录工具-{self.file_name}")
         self.db_manager = SqlDataManager(self.path/self.file_name)
-        self.db_manager.set_instance(0)
+        self.db_manager.set_instance()
         self.content.update_columns(init_load=True)
         self.sidebar.listw.reload_tags()
 
@@ -88,7 +88,7 @@ class MainUI(QWidget):
 
     def on_search_clicked(self, text):
         '''点击按钮确认搜索'''
-        if (not SqlDataManager.instance(0)) or (not text):
+        if (not SqlDataManager.instance()) or (not text):
             return
         data = self.db_manager.get_excerpts_helper().search(text)
         self.content.masonry.rebuild_cards(data)
@@ -96,7 +96,7 @@ class MainUI(QWidget):
     
     def on_tag_selected(self, tag_cid: str):
         '''根据 tag 显示该标签的摘录'''
-        if not SqlDataManager.instance(0):
+        if not SqlDataManager.instance():
             return
         self._on_tag = tag_cid
         excerpt_ids = self.db_manager.get_tags_helper().get_excerpt_cids(tag_cid)
@@ -109,5 +109,5 @@ class MainUI(QWidget):
     
     def on_db_changed(self):
         self.sidebar.listw.reload_tags()
-        if SqlDataManager.instance(0):
-            self.content.masonry.rebuild_cards(SqlDataManager.instance(0).get_all_excerpts())
+        if SqlDataManager.instance():
+            self.content.masonry.rebuild_cards(SqlDataManager.instance().get_all_excerpts())

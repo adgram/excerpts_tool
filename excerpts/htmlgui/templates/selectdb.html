@@ -10,9 +10,7 @@
         <h1>打开数据库</h1>
 
         <form method="POST" action="{{ url_for('config.select_db_view') }}">
-            
             <label for="db_select">请选择文件:</label>
-            
             <select id="db_select" name="db_path" required>
                 {% if db_list %}
                     {% for db_name in db_list %}

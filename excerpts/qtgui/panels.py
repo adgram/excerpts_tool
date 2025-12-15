@@ -193,7 +193,7 @@ class MasonryArea(QWidget):
             self.main_layout.addWidget(cw)
             self.column_widgets.append(cw)
         self.main_layout.addWidget(self.right_spacer)
-        self.sqldata = SqlDataManager.instance(0)
+        self.sqldata = SqlDataManager.instance()
         if not self.sqldata:
             return
         self.rebuild_cards(self.sqldata.get_all_excerpts())
@@ -273,9 +273,9 @@ class TagList(QListWidget):
 
     def reload_tags(self):
         self.clear()
-        if not SqlDataManager.instance(0):
+        if not SqlDataManager.instance():
             return
-        tags = SqlDataManager.instance(0).get_all_tags()
+        tags = SqlDataManager.instance().get_all_tags()
         for tag in tags:
             DataTagItem(tag).add_to(self)
         for i in range(self.count()):
@@ -385,7 +385,7 @@ class SideBar(QFrame):
             self.sig_tag_selected.emit(cur.tag.cid)
 
     def open_tag_manager(self):
-        if not SqlDataManager.instance(0):
+        if not SqlDataManager.instance():
             return
         dialog = TagManagerDialog(self)
         if dialog.exec():
@@ -398,12 +398,12 @@ class SideBar(QFrame):
 
     def on_search_changed(self, text):
         '''实时搜索'''
-        if not SqlDataManager.instance(0):
+        if not SqlDataManager.instance():
             return
         if not text:
             self.listw.show_all()
             return
-        data = SqlDataManager.instance(0).get_tags_helper().search(text)
+        data = SqlDataManager.instance().get_tags_helper().search(text)
         self.listw.show_data(data)
 
 
@@ -505,7 +505,7 @@ class ContentPanel(QFrame):
             self.masonry.refresh(viewport_width)
 
     def open_new_excerpt_dialog(self):
-        if not SqlDataManager.instance(0):
+        if not SqlDataManager.instance():
             return
         dialog = ExcerptDataDialog(None, self)
         dialog.exec()
@@ -549,7 +549,7 @@ class ContentPanel(QFrame):
 class ExcerptDataDialog(QDialog):
     def __init__(self, data: Optional[ExcerptData], parent: ContentPanel=None):
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance(0)
+        self.sqldata = SqlDataManager.instance()
         self.data = data
         self.selected_tags: set[str] = set()
         self._btns_by_cid: dict[str, TagButton] = {}
@@ -770,7 +770,7 @@ class TagManagerDialog(QDialog):
             parent: 父控件
         """
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance(0)
+        self.sqldata = SqlDataManager.instance()
         self.tags: list[TagData] = self.sqldata.get_all_tags()
         for i, tag in enumerate(self.tags):
             if tag.cid == "default":
@@ -990,7 +990,7 @@ class DataManagerDialog(QDialog):
             parent: 父控件
         """
         super().__init__(parent)
-        self.sqldata = SqlDataManager.instance(0)
+        self.sqldata = SqlDataManager.instance()
         self.mainui: QWidget = self.parent().parent()
         self.init_ui()
     
@@ -1144,18 +1144,6 @@ class DataManagerDialog(QDialog):
         if not filename:
             return
         try:
-            # db_path = Path(filename)
-            # # 如果文件已存在，询问是否覆盖
-            # if db_path.exists():
-            #     reply = QMessageBox.question(
-            #         self,
-            #         "确认覆盖",
-            #         f"数据库文件已存在，是否覆盖？\n{db_path.name}",
-            #         QMessageBox.Yes | QMessageBox.No
-            #     )
-            #     if reply != QMessageBox.Yes:
-            #         return
-            #     db_path.unlink()  # 删除旧文件
             db_path = self.cover(filename)
             if not db_path: return
             # 打开新数据库
@@ -1173,18 +1161,6 @@ class DataManagerDialog(QDialog):
         if not filename:
             return
         try:
-            # target_path = Path(filename)
-            # # 如果目标文件存在，询问是否覆盖
-            # if target_path.exists():
-            #     reply = QMessageBox.question(
-            #         self,
-            #         "确认覆盖",
-            #         f"文件已存在，是否覆盖？\n{target_path.name}",
-            #         QMessageBox.Yes | QMessageBox.No
-            #     )
-            #     if reply != QMessageBox.Yes:
-            #         return
-            #     target_path.unlink()
             target_path = self.cover(filename)
             if not target_path: return
             # 先确保数据已提交

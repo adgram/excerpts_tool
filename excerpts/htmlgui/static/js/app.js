@@ -40,6 +40,11 @@ async function fetchAndRenderTags() {
     try {
         // 假设 API 接口为 /api/tags
         const response = await fetch('/api/tags'); 
+        if (response.status === 403) {
+            // Session 丢失，重定向到登录/选择页
+            window.location.href = '/selectdb'; 
+            return; 
+        }
         if (!response.ok) throw new Error('Failed to fetch tags');
         const tagData = await response.json(); 
         
