@@ -298,6 +298,7 @@ class MasonryArea(QWidget):
         self.column_gap = column_gap if column_gap > 0 else 10
         self.column_widgets: list[ColumnsArea] = []
         self.all_excerpts = []  # 保存所有数据
+        self.all_cards: dict[str, CardWidget] = [] # 保存所有cards，包括删除的
         self.loaded_count = 0   # 当前已创建的卡片数量
         self.batch_size = 20    # 每次加载 20 张，可调整
         # 主布局：水平（列 + 最右侧 spacer）
@@ -328,8 +329,6 @@ class MasonryArea(QWidget):
     def reflow(self):
         """重新排列"""
         column_count2 = len(self.column_widgets)
-        if (not self.temp_cards) and self.column_count == column_count2 :
-            return
         # 将多余的列移入temp
         if column_count2 > self.column_count:
             for i in range(self.column_count, column_count2):
@@ -338,30 +337,27 @@ class MasonryArea(QWidget):
                 self.main_layout.removeWidget(w)
                 w.deleteLater()
             self.column_widgets = self.column_widgets[:self.column_count]
-        if column_count2 < self.column_count:
-            for i in range(column_count2, self.column_count):
-                cw = ColumnsArea()
-                self.main_layout.insertWidget(i, cw)
-                self.column_widgets.append(cw)
+        # 平均列数
         self._to_average_column()
+        if not self.temp_cards:
+            return
         # 将temp添加到列
         for card in self.temp_cards:
             self._add_card_to_column(card)
         self.temp_cards.clear()
+    
+    def _to_average_column(self):
+        """平均列"""
+        average = sum([column.get_height() for column in self.column_widgets])//self.column_count
+        for column in self.column_widgets:
+            while column.get_height() > average:
+                self.temp_cards.append(column.pop_card())
 
     def _add_card_to_column(self, card: CardWidget):
         """将卡片添加到列"""
         heights = [column.get_height() for column in self.column_widgets]
         column: ColumnsArea = self.column_widgets[heights.index(min(heights))]
         column.add_card(card)
-    
-    def _to_average_column(self):
-        """平均列"""
-        average = sum([len(column.cards) for column in self.column_widgets])//len(self.column_widgets)
-        average = 1 if average <= 2 else average - 1
-        for column in self.column_widgets:
-            while len(column.cards) > average:
-                self.temp_cards.append(column.pop_card())
     
     def create_card(self, excerpt: ExcerptData) -> CardWidget:
         card = CardWidget(excerpt)
@@ -400,9 +396,11 @@ class MasonryArea(QWidget):
 
     def load_refresh(self, viewport_width: int):
         self.column_count = viewport_width//400 +1
+        column_width = viewport_width//self.column_count
         # 创建新列
         for _ in range(self.column_count):
             cw = ColumnsArea()
+            cw.setMaximumWidth(column_width)
             self.main_layout.addWidget(cw)
             self.column_widgets.append(cw)
         self.main_layout.addWidget(self.right_spacer)
@@ -413,9 +411,18 @@ class MasonryArea(QWidget):
 
     def refresh(self, viewport_width: int):
         cols = viewport_width//400 +1
+        column_width = viewport_width//cols
         if cols != self.column_count:
             self.column_count = cols
+            column_count2 = len(self.column_widgets)
+            if column_count2 < self.column_count:
+                for i in range(column_count2, self.column_count):
+                    cw = ColumnsArea()
+                    self.main_layout.insertWidget(i, cw)
+                    self.column_widgets.append(cw)
             self.reflow()
+        for c in range(self.column_count):
+            self.column_widgets[c].setMaximumWidth(column_width)
 
     def clear_cards(self):
         for col in self.column_widgets:
@@ -442,7 +449,7 @@ class ContentPanel(QFrame):
     def __init__(self, window_width: Callable[[], int]):
         super().__init__()
         self.window_width = window_width
-        self._is_load = False
+        self.is_load = False
         self.big_card = None
         self.setStyleSheet(f"background:{MColor.color_white}; border-radius:10px;")
         cly = QVBoxLayout(self)
@@ -514,13 +521,13 @@ class ContentPanel(QFrame):
         dialog.exec()
 
     def showEvent(self, event):
-        self._is_load = True
+        self.is_load = True
         super().showEvent(event)
         self.update_columns(init_load=True)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self._is_load:
+        if self.is_load:
             self.update_columns(init_load=False)
 
     def show_big_card(self, excerpt: ExcerptData):
