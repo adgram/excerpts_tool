@@ -14,6 +14,218 @@ from ..sqlutils import SqlDataManager, TagData, ExcerptData, get_db_list
 
 
 
+class NoSelectionDelegate(QStyledItemDelegate):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem,
+              index: QModelIndex | QPersistentModelIndex):
+        if option.state & QStyle.State_Selected:
+            option.state &= ~QStyle.State_Selected
+        super().paint(painter, option, index)
+
+
+
+class TagList(QListWidget):
+    def __init__(self):
+        super().__init__()
+        self.current_tag: str = "default"       # 当前标签
+        self.mode = 0 # 0: 显示部分，1: 显示全部
+        self.setFrameShape(QFrame.NoFrame)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setSpacing(0)
+        self.setSelectionMode(QListWidget.SingleSelection)
+        self.setItemDelegate(NoSelectionDelegate(self))
+        # 关键确保标签宽度正常自适应
+        self.setUniformItemSizes(False)
+        self.setResizeMode(QListWidget.Adjust)
+        self.setStyleSheet("""
+            outline: none;
+            border: none;
+            background: transparent;
+        """)
+        # 关键：禁用水平滚动条
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.reload_tags()
+        self.currentItemChanged.connect(self.update_tag_selection)
+    
+    def update_tag_selection(self, cur: QListWidgetItem, prev: QListWidgetItem) -> None:
+        """
+        当列表选中项变化时调用：
+        - 清理 prev 的样式
+        - 设置 cur 的选中样式（包括文字加粗、颜色）
+        """
+        if prev is not None:
+            w_prev: DataTagItem = self.itemWidget(prev)
+            if w_prev:
+                w_prev.setSelected(False)
+        if cur is not None:
+            w_cur: DataTagItem = self.itemWidget(cur)
+            if w_cur:
+                w_cur.setSelected(True)
+
+    def reload_tags(self):
+        '''刷新tags'''
+        self.clear()
+        if not SqlDataManager.instance():
+            return
+        tags = SqlDataManager.instance().get_all_tags()
+        for tag in tags:
+            DataTagItem(tag).add_to(self)
+        # 选中一个tag
+        for i in range(self.count()):
+            item = self.item(i)
+            tag_widget = self.itemWidget(item)
+            if tag_widget.cid == self.current_tag:
+                self.setCurrentRow(i)
+                tag_widget.setSelected(True)
+                break
+
+    def reset_tags(self):
+        for i in range(self.count()):
+            self.itemWidget(self.item(i)).reset_tagnum()
+
+    def show_all(self):
+        if self.mode != 1:
+            self.mode = 1
+            self.reload_tags()
+    
+    def show_data(self, tags: list[TagData]):
+        self.mode = 0
+        self.clear()
+        for tag in tags:
+            DataTagItem(tag).add_to(self)
+        if tags:
+            self.current_tag = tags[0].cid
+            tag_widget = self.itemWidget(self.item(0))
+            self.setCurrentRow(0)
+            tag_widget.setSelected(True)
+
+
+
+class SearchBar(QHBoxLayout):
+    sig_search_changed = Signal(str)
+    sig_search_clicked = Signal(str)
+    def __init__(self, width_s: int, width_b: int):
+        super().__init__()
+        self.search_edit = QLineEdit()
+        self.search_edit.setFixedSize(width_s, 34)
+        self.search_edit.setClearButtonEnabled(True)
+        # 详细的样式表设置
+        self.search_edit.setStyleSheet(f"""
+            QLineEdit {{
+                border: 1px solid {MColor.color_light};
+                border-radius: 15px;
+                padding: 0px 14px;
+                background-color: {MColor.color_white};
+            }}
+            QLineEdit:hover {{
+                border: 2px solid {MColor.color_bright};
+            }}
+        """)
+        self.addWidget(self.search_edit)
+        self.search_edit.textChanged.connect(self.sig_search_changed)
+        if width_b > 0:
+            self.btn_search = TagButton("🗒️搜索", MColor.color_bright, MColor.color_white, 14)
+            self.btn_search.setFixedSize(width_b, 34)
+            self.addWidget(self.btn_search)
+            self.btn_search.clicked.connect(lambda: self.sig_search_clicked.emit(self.search_edit.text()))
+
+
+
+
+class SideBar(QFrame):
+    db_changed = Signal()
+    sig_tag_selected = Signal(str)
+    def __init__(self):
+        super().__init__()
+        self.setFixedWidth(220)
+        self.setStyleSheet(f"background:{MColor.color_white}; border-radius:10px;")
+        slay = QVBoxLayout(self)
+        slay.setContentsMargins(20, 20, 20, 20)
+        slay.setSpacing(10)
+
+        head = QHBoxLayout()
+        tt = QLabel("📑标签分类")
+        tt.setStyleSheet(f"color:{MColor.color_bright}; font-size:18px; font-weight:bold;")
+        head.addWidget(tt)
+        head.addStretch()
+        self.btn_setting = TagButton("⚙️", "transparent", MColor.color_dark, 18)
+        head.addWidget(self.btn_setting)
+        slay.addLayout(head)
+
+        self.search_bar = SearchBar(self.width() - 40, 0)
+        self.search_bar.search_edit.setPlaceholderText("搜索标签...")
+        self.search_bar.sig_search_changed.connect(self.on_search_changed)
+        slay.addLayout(self.search_bar)
+        self.listw = TagList()
+        slay.addWidget(self.listw)
+
+        self.btn_export = QPushButton("💾数据管理")
+        self.btn_export.setFixedHeight(36)
+        self.btn_export.setStyleSheet(f"""border:1px solid {MColor.color_bright};
+                                      color:{MColor.color_bright};
+                                      border-radius:8px;
+                                      font-size:14px""")
+        self.btn_export.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        slay.addWidget(self.btn_export)
+
+        self.btn_setting.clicked.connect(self.open_tag_manager)
+        self.btn_export.clicked.connect(self.open_data_manager)
+        self.listw.currentItemChanged.connect(self.on_tag_selected)
+    
+    def on_tag_selected(self, cur: DataTagItem, prev: DataTagItem):
+        if cur:
+            self.sig_tag_selected.emit(cur.tag.cid)
+
+    def open_tag_manager(self):
+        if not SqlDataManager.instance():
+            return
+        dialog = TagManagerDialog(self)
+        if dialog.exec():
+            # 标签更新后刷新侧栏
+            self.listw.reload_tags()
+
+    def open_data_manager(self):
+        dialog = DataManagerDialog(self)
+        dialog.exec()
+
+    def on_search_changed(self, text):
+        '''实时搜索'''
+        if not SqlDataManager.instance():
+            return
+        if not text:
+            self.listw.show_all()
+            return
+        data = SqlDataManager.instance().get_tags_helper().search(text)
+        self.listw.show_data(data)
+
+
+
+class Topbar(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setFixedHeight(60)
+        tlay = QHBoxLayout(self)
+        tlay.setContentsMargins(16, 8, 16, 8)
+
+        icon = QLabel("📝")
+        icon.setFixedSize(36, 36)
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setStyleSheet(f'''background:{MColor.color_bright};
+                           border-radius:6px;
+                           font-size:24px;''')
+        name = QLabel("文字摘录工具")
+        name.setStyleSheet(f"font-size:20px; color:{MColor.color_bright}; font-weight:700;")
+        tlay.addWidget(icon)
+        tlay.addWidget(name)
+        tlay.addStretch()
+        self.search_bar = SearchBar(210, 80)
+        self.search_bar.search_edit.setPlaceholderText("搜索摘录内容...")
+        tlay.addLayout(self.search_bar)
+
+
+
+
 class ColumnsArea(QWidget):
     def __init__(self):
         super().__init__()
@@ -67,6 +279,7 @@ class ColumnsArea(QWidget):
 
     def get_height(self):
         return sum([card.height() for card in self.cards])
+
 
 
 class MasonryArea(QWidget):
@@ -222,217 +435,6 @@ class MasonryArea(QWidget):
 
 
 
-class NoSelectionDelegate(QStyledItemDelegate):
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem,
-              index: QModelIndex | QPersistentModelIndex):
-        if option.state & QStyle.State_Selected:
-            option.state &= ~QStyle.State_Selected
-        super().paint(painter, option, index)
-
-
-
-class TagList(QListWidget):
-    def __init__(self):
-        super().__init__()
-        self.current_tag: str = "default"       # 当前标签
-        self.mode = 0 # 0: 显示部分，1: 显示全部
-        self.setFrameShape(QFrame.NoFrame)
-        self.setContentsMargins(0, 0, 0, 0)
-        self.setSpacing(0)
-        self.setSelectionMode(QListWidget.SingleSelection)
-        self.setItemDelegate(NoSelectionDelegate(self))
-        # 关键确保标签宽度正常自适应
-        self.setUniformItemSizes(False)
-        self.setResizeMode(QListWidget.Adjust)
-        self.setStyleSheet("""
-            outline: none;
-            border: none;
-            background: transparent;
-        """)
-        # 关键：禁用水平滚动条
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        self.reload_tags()
-        self.currentItemChanged.connect(self.update_tag_selection)
-    
-    def update_tag_selection(self, cur: QListWidgetItem, prev: QListWidgetItem) -> None:
-        """
-        当列表选中项变化时调用：
-        - 清理 prev 的样式
-        - 设置 cur 的选中样式（包括文字加粗、颜色）
-        """
-        if prev is not None:
-            w_prev: DataTagItem = self.itemWidget(prev)
-            if w_prev:
-                w_prev.setSelected(False)
-        if cur is not None:
-            w_cur: DataTagItem = self.itemWidget(cur)
-            if w_cur:
-                w_cur.setSelected(True)
-
-    def reload_tags(self):
-        self.clear()
-        if not SqlDataManager.instance():
-            return
-        tags = SqlDataManager.instance().get_all_tags()
-        for tag in tags:
-            DataTagItem(tag).add_to(self)
-        for i in range(self.count()):
-            item = self.item(i)
-            tag_widget = self.itemWidget(item)
-            if tag_widget.cid == self.current_tag:
-                self.setCurrentRow(i)
-                tag_widget.setSelected(True)
-                break
-
-    def reset_tags(self):
-        for i in range(self.count()):
-            self.itemWidget(self.item(i)).reset_tagnum()
-
-    def show_all(self):
-        if self.mode != 1:
-            self.mode = 1
-            self.reload_tags()
-    
-    def show_data(self, tags: list[TagData]):
-        self.mode = 0
-        self.clear()
-        for tag in tags:
-            DataTagItem(tag).add_to(self)
-        if tags:
-            self.current_tag = tags[0].cid
-            tag_widget = self.itemWidget(self.item(0))
-            self.setCurrentRow(0)
-            tag_widget.setSelected(True)
-
-
-
-class SearchBar(QHBoxLayout):
-    sig_search_changed = Signal(str)
-    sig_search_clicked = Signal(str)
-    def __init__(self, width_s: int, width_b: int):
-        super().__init__()
-        self.search_edit = QLineEdit()
-        self.search_edit.setFixedSize(width_s, 34)
-        self.search_edit.setClearButtonEnabled(True)
-        # 详细的样式表设置
-        self.search_edit.setStyleSheet(f"""
-            QLineEdit {{
-                border: 1px solid {MColor.color_light};
-                border-radius: 15px;
-                padding: 0px 14px;
-                background-color: {MColor.color_white};
-            }}
-            QLineEdit:hover {{
-                border: 2px solid {MColor.color_bright};
-            }}
-        """)
-        self.addWidget(self.search_edit)
-        self.search_edit.textChanged.connect(self.sig_search_changed)
-        if width_b > 0:
-            self.btn_search = TagButton("🗒️搜索", MColor.color_bright, MColor.color_white, 14)
-            self.btn_search.setFixedSize(width_b, 34)
-            self.addWidget(self.btn_search)
-            self.btn_search.clicked.connect(lambda: self.sig_search_clicked.emit(self.search_edit.text()))
-
-
-
-
-
-class SideBar(QFrame):
-    db_changed = Signal()
-    sig_tag_selected = Signal(str)
-    def __init__(self):
-        super().__init__()
-        self.setFixedWidth(220)
-        self.setStyleSheet(f"background:{MColor.color_white}; border-radius:10px;")
-        slay = QVBoxLayout(self)
-        slay.setContentsMargins(20, 20, 20, 20)
-        slay.setSpacing(10)
-
-        head = QHBoxLayout()
-        tt = QLabel("📑标签分类")
-        tt.setStyleSheet(f"color:{MColor.color_bright}; font-size:18px; font-weight:bold;")
-        head.addWidget(tt)
-        head.addStretch()
-        self.btn_setting = TagButton("⚙️", "transparent", MColor.color_dark, 18)
-        head.addWidget(self.btn_setting)
-        slay.addLayout(head)
-
-        self.search_bar = SearchBar(self.width() - 40, 0)
-        self.search_bar.search_edit.setPlaceholderText("搜索标签...")
-        self.search_bar.sig_search_changed.connect(self.on_search_changed)
-        slay.addLayout(self.search_bar)
-        self.listw = TagList()
-        slay.addWidget(self.listw)
-
-        self.btn_export = QPushButton("💾数据管理")
-        self.btn_export.setFixedHeight(36)
-        self.btn_export.setStyleSheet(f"""border:1px solid {MColor.color_bright};
-                                      color:{MColor.color_bright};
-                                      border-radius:8px;
-                                      font-size:14px""")
-        self.btn_export.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        slay.addWidget(self.btn_export)
-
-        self.btn_setting.clicked.connect(self.open_tag_manager)
-        self.btn_export.clicked.connect(self.open_data_manager)
-        self.listw.currentItemChanged.connect(self.on_tag_selected)
-    
-    def on_tag_selected(self, cur: DataTagItem, prev: DataTagItem):
-        if cur:
-            self.sig_tag_selected.emit(cur.tag.cid)
-
-    def open_tag_manager(self):
-        if not SqlDataManager.instance():
-            return
-        dialog = TagManagerDialog(self)
-        if dialog.exec():
-            # 标签更新后刷新侧栏
-            self.listw.reload_tags()
-
-    def open_data_manager(self):
-        dialog = DataManagerDialog(self)
-        dialog.exec()
-
-    def on_search_changed(self, text):
-        '''实时搜索'''
-        if not SqlDataManager.instance():
-            return
-        if not text:
-            self.listw.show_all()
-            return
-        data = SqlDataManager.instance().get_tags_helper().search(text)
-        self.listw.show_data(data)
-
-
-
-class Topbar(QFrame):
-    def __init__(self):
-        super().__init__()
-        self.setFixedHeight(60)
-        tlay = QHBoxLayout(self)
-        tlay.setContentsMargins(16, 8, 16, 8)
-
-        icon = QLabel("📝")
-        icon.setFixedSize(36, 36)
-        icon.setAlignment(Qt.AlignCenter)
-        icon.setStyleSheet(f'''background:{MColor.color_bright};
-                           border-radius:6px;
-                           font-size:24px;''')
-        name = QLabel("文字摘录工具")
-        name.setStyleSheet(f"font-size:20px; color:{MColor.color_bright}; font-weight:700;")
-        tlay.addWidget(icon)
-        tlay.addWidget(name)
-        tlay.addStretch()
-        self.search_bar = SearchBar(210, 80)
-        self.search_bar.search_edit.setPlaceholderText("搜索摘录内容...")
-        tlay.addLayout(self.search_bar)
-
-
-
-
 class ContentPanel(QFrame):
     tags_changed = Signal()
     sig_scroll_to_bottom = Signal()
@@ -494,6 +496,7 @@ class ContentPanel(QFrame):
         """
         根据 scroll viewport 宽度决定列数
         同时会设置每列最小/最大宽度（per_col），以实现 3/2/1 列响应式。
+        启动时和修改窗口宽度时均会调用
         """
         # 获取 scroll 可视宽度（容错）
         viewport_width = self.scrollp.viewport().width()

@@ -62,7 +62,7 @@ class MainUI(QWidget):
         right.addWidget(self.content)
         root.addLayout(right)
         self.setMinimumSize(800, 400)
-        self.resize(1200, 800)
+        self.resize(1400, 800)
         if self.file_name:
             self.init_data()
         else:
